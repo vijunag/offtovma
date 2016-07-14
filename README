@@ -1,0 +1,29 @@
+
+* offtovma - converts file offset to vma mappings
+
+* SYNOPSIS - 
+			offtovma [-h | --help ]
+			         [-c | --core ]
+							 [-v | --version ]
+							 [-o | --offset ]
+
+* DESCRIPTION -
+	offtovma displays various load segments/vmas available in the core file.
+
+* OPTIONS
+
+	-h
+	--help - Prints the help string
+
+	-v
+	--version - Prints the verstion string
+
+	-c
+	--core - The core file name
+
+	-o
+	--offset - The offset within the file that needs vma mappings
+
+TODO:
+ * Support pattern searching within the core file
+
