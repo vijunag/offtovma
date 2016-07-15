@@ -189,24 +189,24 @@ static void find_pattern_in_load_segment(Elf_ctxt *elf,
 		                                     unsigned long pattern,
 																				 unsigned long pat_len)
 {
-	load_list *head = g_list.head;
+  load_list *head = g_list.head;
 
-	while (head) {
-		void	*s = elf->mmap_addr+head->offset;
-		int len =  head->f_sz;
-		void *p = NULL;
+  while (head) {
+    void  *s = elf->mmap_addr+head->offset;
+    int len =  head->f_sz;
+    void *p = NULL;
 rep:
-		p = memmem(s, len, &pattern, pat_len);
-		if (p) {
-			len -= (unsigned long)p - (unsigned long)s;
-			unsigned long offset = (unsigned long)p-(unsigned long)(elf->mmap_addr+head->offset);
-			s = (void*)((unsigned long)p + pat_len);
-			printf("VMA for the pattern is approx around 0x%llx\n", offset+head->lowaddr);
-			goto rep;
-		} else {
-			head = head->next;
-		}
-	}
+    p = memmem(s, len, &pattern, pat_len);
+    if (p) {
+	len -= (unsigned long)p - (unsigned long)s;
+	unsigned long offset = (unsigned long)p-(unsigned long)(elf->mmap_addr+head->offset);
+	s = (void*)((unsigned long)p + pat_len);
+	printf("VMA for the pattern is approx around 0x%llx\n", offset+head->lowaddr);
+	goto rep;
+    } else {
+	head = head->next;
+    }
+  }
 }
 
 static const char *optString ="c:o:hvp:";
