@@ -83,8 +83,8 @@ struct list_head {
 	load_list *tail;
 } g_list;
 
-#define APPEND_LIST(_l, i)                                 \
-do {                                                       \
+#define APPEND_LIST(_l, i)                                       \
+do {                                                             \
 	load_list *nlist = (load_list*)malloc(sizeof(load_list));\
 	nlist->next = NULL;                                      \
 	nlist->idx = i;                                          \
@@ -93,13 +93,13 @@ do {                                                       \
 	nlist->hiaddr=nlist->lowaddr+(_l)->p_memsz;              \
 	nlist->f_sz = (_l)->p_filesz;                            \
 	if (!g_list.head) {                                      \
-		g_list.head = nlist;                                   \
+		g_list.head = nlist;                             \
 	}                                                        \
 	if (!g_list.tail) {                                      \
-		g_list.tail = nlist;                                   \
+		g_list.tail = nlist;                             \
 	} else {                                                 \
 	  g_list.tail->next = nlist;                             \
-		g_list.tail = nlist;                                   \
+		g_list.tail = nlist;                             \
 	}                                                        \
 } while (0);
 
@@ -156,33 +156,33 @@ static void load_the_load_section(Elf_ctxt *elf)
 		 }
 		 idx++;
    }
-	 load_list *head = g_list.head;
-	 printf("Load sections in the core file\n");
-	 while (head) {
-	   printf("0x%016llx-0x%016llx is load%d at offset %8lld\n",
-				 head->lowaddr, head->hiaddr, head->idx, head->offset);
-		 head=head->next;
-	 }
+   load_list *head = g_list.head;
+   printf("Load sections in the core file\n");
+   while (head) {
+     printf("0x%016llx-0x%016llx is load%d at offset %8lld\n",
+	head->lowaddr, head->hiaddr, head->idx, head->offset);
+     head=head->next;
+   }
 }
 
 void find_vma_from_offset(off_t offset)
 {
-	 load_list *head = g_list.head;
+   load_list *head = g_list.head;
 #define HEAD_FILESZ(_head) \
-	 ((_head)->hiaddr - (_head)->lowaddr)
+   ((_head)->hiaddr - (_head)->lowaddr)
 
-	 while (head) {
-		 off_t load_end = head->offset + HEAD_FILESZ(head);
-		 if (head->offset <= offset &&
-				 offset < load_end) {
-	     printf("0x%016llx-0x%016llx is load%x at offset %8llu\n",
-				  head->lowaddr, head->hiaddr, head->idx, head->offset);
-			 unsigned long vma_offset = (unsigned long)(offset-head->offset);
-			 printf("VMA is approximately 0x%llx\n", head->lowaddr+vma_offset);
-			 return;
-		 }
-		 head=head->next;
-	 }
+   while (head) {
+     off_t load_end = head->offset + HEAD_FILESZ(head);
+     if (head->offset <= offset &&
+	 offset < load_end) {
+	 printf("0x%016llx-0x%016llx is load%x at offset %8llu\n",
+	   head->lowaddr, head->hiaddr, head->idx, head->offset);
+	   unsigned long vma_offset = (unsigned long)(offset-head->offset);
+	   printf("VMA is approximately 0x%llx\n", head->lowaddr+vma_offset);
+	   return;
+       }
+        head=head->next;
+   }
 }
 
 static void find_pattern_in_load_segment(Elf_ctxt *elf,
