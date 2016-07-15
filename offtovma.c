@@ -186,8 +186,8 @@ void find_vma_from_offset(off_t offset)
 }
 
 static void find_pattern_in_load_segment(Elf_ctxt *elf,
-		                                     unsigned long pattern,
-																				 unsigned long pat_len)
+		                         unsigned long pattern,
+							     unsigned long pat_len)
 {
   load_list *head = g_list.head;
 
@@ -328,12 +328,12 @@ int main(int argc, char **argv)
 
   load_the_load_section(&elf);
 
-	printf("Finding vma for the offset %llu\n", offset);
-	find_vma_from_offset(offset);
+  printf("Finding vma for the offset %llu\n", offset);
+  find_vma_from_offset(offset);
 
-	if (pattern) {
-	  printf("Looking for pattern %llx...\n", pattern);
-	  find_pattern_in_load_segment(&elf, pattern, 4);
-	}
+  if (pattern) {
+	printf("Looking for pattern %llx...\n", pattern);
+	find_pattern_in_load_segment(&elf, pattern, 4);
+  }
 }
 
