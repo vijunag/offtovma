@@ -5,14 +5,14 @@
  * file offset
  */
 
-#include <stdio.h>
+#define _GNU_SOURCE 1 //memmem
 #include <string.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <errno.h>
 #include <assert.h>
 #include <getopt.h>
-
 #include <unistd.h>
 #include <fcntl.h>
 #include <elf.h>
@@ -75,6 +75,7 @@ struct load_list {
 	off_t offset;
 	unsigned long lowaddr;
 	unsigned long hiaddr;
+	unsigned long f_sz;
 };
 typedef struct load_list load_list;
 struct list_head {
@@ -90,6 +91,7 @@ do {                                                       \
 	nlist->offset =(_l)->p_offset;                           \
 	nlist->lowaddr=(_l)->p_vaddr;                            \
 	nlist->hiaddr=nlist->lowaddr+(_l)->p_memsz;              \
+	nlist->f_sz = (_l)->p_filesz;                            \
 	if (!g_list.head) {                                      \
 		g_list.head = nlist;                                   \
 	}                                                        \
@@ -166,7 +168,6 @@ static void load_the_load_section(Elf_ctxt *elf)
 void find_vma_from_offset(off_t offset)
 {
 	 load_list *head = g_list.head;
-	 int idx = 0;
 #define HEAD_FILESZ(_head) \
 	 ((_head)->hiaddr - (_head)->lowaddr)
 
@@ -184,10 +185,35 @@ void find_vma_from_offset(off_t offset)
 	 }
 }
 
-static const char *optString ="c:o:hv";
+static void find_pattern_in_load_segment(Elf_ctxt *elf,
+		                                     unsigned long pattern,
+																				 unsigned long pat_len)
+{
+	load_list *head = g_list.head;
+
+	while (head) {
+		void	*s = elf->mmap_addr+head->offset;
+		int len =  head->f_sz;
+		void *p = NULL;
+rep:
+		p = memmem(s, len, &pattern, pat_len);
+		if (p) {
+			len -= (unsigned long)p - (unsigned long)s;
+			unsigned long offset = (unsigned long)p-(unsigned long)(elf->mmap_addr+head->offset);
+			s = (void*)((unsigned long)p + pat_len);
+			printf("VMA for the pattern is approx around 0x%llx\n", offset+head->lowaddr);
+			goto rep;
+		} else {
+			head = head->next;
+		}
+	}
+}
+
+static const char *optString ="c:o:hvp:";
 static const struct option longOpts[] = {
   {"core", required_argument, NULL, 0 },
   {"o", required_argument, NULL, 0 },
+  {"p", required_argument, NULL, 0 },
   {"help", no_argument, NULL, 0 },
   {"version", no_argument, NULL, 0 },
   { NULL, no_argument, NULL, 0}
@@ -195,11 +221,12 @@ static const struct option longOpts[] = {
 
 static void print_usage(void)
 {
-  printf("readnote utility\n");
+  printf("offtovma utility\n");
   printf("Allowed options: \n");
   printf("-h [ --help ]                            Display this message\n");
   printf("-c [ --core ]                            Core file name\n");
   printf("-o [ --offset ]                          Search for offset within core file\n");
+  printf("-p [ --pattern ]                         Search for a pattern within the core file\n");
   printf("-e [ --exe ]                             Exe file name\n");
   printf("-v [ --version ]                         Display version information\n");
 }
@@ -211,12 +238,16 @@ int main(int argc, char **argv)
   int retval = -1, opt = -1, longIndex;
 	char core[256] = {0};
 	off_t offset = 0;
+	unsigned long pattern = 0;
 
   opt = getopt_long(argc, argv, optString, longOpts, &longIndex);
   while (-1 != opt) {
     switch(opt) {
 		 case 'o':
 			 offset = atol(optarg);
+			 break;
+		 case 'p':
+			 pattern = strtol(optarg, NULL, 16);
 			 break;
      case 'h':
        print_usage();
@@ -237,8 +268,10 @@ int main(int argc, char **argv)
        if (!strcmp("core", longOpts[longIndex].name)) {
          strncpy(core, optarg, sizeof(core));
          core[256] = 0;
-       } else if (!strcmp("pattern", longOpts[longIndex].name)) {
+       } else if (!strcmp("offset", longOpts[longIndex].name)) {
 				 offset = atol(optarg);
+       } else if (!strcmp("pattern", longOpts[longIndex].name)) {
+				 pattern = strtol(optarg, NULL, 16);
 			 } else if (!strcmp("version", longOpts[longIndex].name)) {
          fprintf(stderr, "offtovma Version 1.0 [13th Jul 2016]\n");
          exit(0);
@@ -297,5 +330,10 @@ int main(int argc, char **argv)
 
 	printf("Finding vma for the offset %llu\n", offset);
 	find_vma_from_offset(offset);
+
+	if (pattern) {
+	  printf("Looking for pattern %llx...\n", pattern);
+	  find_pattern_in_load_segment(&elf, pattern, 4);
+	}
 }
 
