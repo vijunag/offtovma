@@ -24,6 +24,9 @@
 	-o
 	--offset - The offset within the file that needs vma mappings
 
+  -d
+  --dump - Emulate octal dump but print VMA instead of file offsets.
+
 TODO:
  * Support pattern searching within the core file
 

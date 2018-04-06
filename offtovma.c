@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <ctype.h>
 #include <errno.h>
 #include <assert.h>
 #include <getopt.h>
@@ -21,6 +22,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <bits/siginfo.h>
+
+#define VERS_STRING "eod version 2.0 - [April 6th 2018]\n"
 
 #ifndef IS_ELF
 #define IS_ELF(ehdr)  ((ehdr).e_ident[EI_MAG0] == ELFMAG0 && \
@@ -209,13 +212,62 @@ rep:
   }
 }
 
-static const char *optString ="c:o:hvp:";
+static void print_ascii(unsigned int *s)
+{
+  char *p =(char*)s;
+  int col_width=24;
+  char *end=p+24;
+
+  while(p<=end) {
+    unsigned char c1=*p;
+    unsigned char c2=isprint(c1) ? c1 : '.';
+    putchar(c2);
+    p++;
+  }
+}
+
+static void xprintf(unsigned long lowaddr, unsigned int *s)
+{
+#define FMT_STR \
+  "0x%08llx: 0x%08x  0x%08x  0x%08x  0x%08x  0x%08x  0x%08x  >" \
+
+  printf(FMT_STR,lowaddr,
+      *s, *(s+1),*(s+2),*(s+3), *(s+4),
+      *(s+5));
+
+  print_ascii(s);
+
+  printf("\n");
+}
+
+void dump(Elf_ctxt *elf)
+{
+   load_list *head = g_list.head;
+   while(head) {
+     unsigned long lowaddr=head->lowaddr;
+     unsigned long endaddr=lowaddr+head->f_sz;
+
+     unsigned int *s=(unsigned int*)(((unsigned long)elf->mmap_addr)+head->offset);
+     while (lowaddr<endaddr) {
+       xprintf(lowaddr, s);
+       lowaddr+=24;
+       s+=6;
+     }
+     if (endaddr != head->hiaddr) { //rest all zeroes
+       printf("0x%08llx: .....*......\n", lowaddr);
+     }
+     head=head->next;
+   }
+}
+
+static const char *optString ="c:o:hdvp:";
 static const struct option longOpts[] = {
   {"core", required_argument, NULL, 0 },
   {"o", required_argument, NULL, 0 },
   {"p", required_argument, NULL, 0 },
   {"help", no_argument, NULL, 0 },
   {"version", no_argument, NULL, 0 },
+  {"dump", no_argument, NULL, 0},
   { NULL, no_argument, NULL, 0}
 };
 
@@ -229,6 +281,7 @@ static void print_usage(void)
   printf("-p [ --pattern ]                         Search for a pattern within the core file\n");
   printf("-e [ --exe ]                             Exe file name\n");
   printf("-v [ --version ]                         Display version information\n");
+  printf("-d [ --dump ]                            Emulate octal dump\n");
 }
 
 int main(int argc, char **argv)
@@ -239,6 +292,7 @@ int main(int argc, char **argv)
 	char core[256] = {0};
 	off_t offset = 0;
 	unsigned long pattern = 0;
+  int do_dump=0;
 
   opt = getopt_long(argc, argv, optString, longOpts, &longIndex);
   while (-1 != opt) {
@@ -254,11 +308,14 @@ int main(int argc, char **argv)
        exit(0);
        break;
      case 'v':
-       fprintf(stderr, "offtovma Version 1.0 [13th Jul 2016]\n");
+       fprintf(stderr, VERS_STRING);
        exit(0);
      case 'c':
        strncpy(core, optarg, sizeof(core));
        core[256] = 0;
+       break;
+     case 'd':
+       do_dump=1;
        break;
      case '?':
        print_usage();
@@ -278,6 +335,8 @@ int main(int argc, char **argv)
        } else if (!strcmp("help", longOpts[longIndex].name)) {
          print_usage();
          exit(0);
+       } else if (!strcmp("dump", longOpts[longIndex].name)) {
+         do_dump=1;
        }
        break;
      default:
@@ -292,7 +351,7 @@ int main(int argc, char **argv)
     LOG_MSG("--core is a mandatory argument\n");
     print_usage();
     exit(-1);
-  } else if (!offset) {
+  } else if (!do_dump && !offset) {
     LOG_MSG("--offset is a mandatory argument\n");
     print_usage();
     exit(-1);
@@ -327,6 +386,11 @@ int main(int argc, char **argv)
   }
 
   load_the_load_section(&elf);
+
+  if (do_dump) {
+    dump(&elf);
+    exit(0);
+  }
 
   printf("Finding vma for the offset %llu\n", offset);
   find_vma_from_offset(offset);
