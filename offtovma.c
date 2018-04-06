@@ -73,37 +73,37 @@ typedef struct Elf_ctxt {
 })
 
 struct load_list {
-	struct load_list *next;
-	int idx;
-	off_t offset;
-	unsigned long lowaddr;
-	unsigned long hiaddr;
-	unsigned long f_sz;
+  struct load_list *next;
+  int idx;
+  off_t offset;
+  unsigned long lowaddr;
+  unsigned long hiaddr;
+  unsigned long f_sz;
 };
 typedef struct load_list load_list;
 struct list_head {
-	load_list *head;
-	load_list *tail;
+  load_list *head;
+  load_list *tail;
 } g_list;
 
 #define APPEND_LIST(_l, i)                                       \
 do {                                                             \
-	load_list *nlist = (load_list*)malloc(sizeof(load_list));\
-	nlist->next = NULL;                                      \
-	nlist->idx = i;                                          \
-	nlist->offset =(_l)->p_offset;                           \
-	nlist->lowaddr=(_l)->p_vaddr;                            \
-	nlist->hiaddr=nlist->lowaddr+(_l)->p_memsz;              \
-	nlist->f_sz = (_l)->p_filesz;                            \
-	if (!g_list.head) {                                      \
-		g_list.head = nlist;                             \
-	}                                                        \
-	if (!g_list.tail) {                                      \
-		g_list.tail = nlist;                             \
-	} else {                                                 \
-	  g_list.tail->next = nlist;                             \
-		g_list.tail = nlist;                             \
-	}                                                        \
+  load_list *nlist = (load_list*)malloc(sizeof(load_list));\
+  nlist->next = NULL;                                      \
+  nlist->idx = i;                                          \
+  nlist->offset =(_l)->p_offset;                           \
+  nlist->lowaddr=(_l)->p_vaddr;                            \
+  nlist->hiaddr=nlist->lowaddr+(_l)->p_memsz;              \
+  nlist->f_sz = (_l)->p_filesz;                            \
+  if (!g_list.head) {                                      \
+    g_list.head = nlist;                                   \
+  }                                                        \
+  if (!g_list.tail) {                                      \
+    g_list.tail = nlist;                                   \
+  } else {                                                 \
+    g_list.tail->next = nlist;                             \
+    g_list.tail = nlist;                                   \
+  }                                                        \
 } while (0);
 
 static void* Elf_find_phdr_by_type(Elf_ctxt *elf, int type, int *idx)
@@ -120,7 +120,7 @@ static void* Elf_find_phdr_by_type(Elf_ctxt *elf, int type, int *idx)
    _p = (phdr_type *)((char *)_e + _e->e_phoff); \
    for (i = *idx; i < _e->e_phnum; ++i) { \
        if (type == _p[i].p_type) { \
-				 *idx = i;  \
+         *idx = i;  \
          found = 1; \
          break; \
        } \
@@ -142,28 +142,28 @@ static void* Elf_find_phdr_by_type(Elf_ctxt *elf, int type, int *idx)
 static void load_the_load_section(Elf_ctxt *elf)
 {
    int idx = 0;
-	 int count = 0;
-	 if (elf->is32) {
-		 count = GET_PHDR_COUNT(Elf32_Ehdr, elf->mmap_addr);
-	 } else {
-		 count = GET_PHDR_COUNT(Elf64_Ehdr, elf->mmap_addr);
-	 }
+   int count = 0;
+   if (elf->is32) {
+     count = GET_PHDR_COUNT(Elf32_Ehdr, elf->mmap_addr);
+   } else {
+     count = GET_PHDR_COUNT(Elf64_Ehdr, elf->mmap_addr);
+   }
    while (idx < count) {
-		 void *phdr = Elf_find_phdr_by_type(elf, PT_LOAD, &idx);
-		 if (elf->is32) {
-		   Elf32_Phdr *p = (Elf32_Phdr*) phdr;
-			 APPEND_LIST(p, idx);
-		 } else {
-			 Elf64_Phdr *p = (Elf64_Phdr*) phdr;
-			 APPEND_LIST(p, idx);
-		 }
-		 idx++;
+     void *phdr = Elf_find_phdr_by_type(elf, PT_LOAD, &idx);
+     if (elf->is32) {
+       Elf32_Phdr *p = (Elf32_Phdr*) phdr;
+       APPEND_LIST(p, idx);
+     } else {
+       Elf64_Phdr *p = (Elf64_Phdr*) phdr;
+       APPEND_LIST(p, idx);
+     }
+     idx++;
    }
    load_list *head = g_list.head;
    printf("Load sections in the core file\n");
    while (head) {
      printf("0x%016llx-0x%016llx is load%d at offset %8lld\n",
-	head->lowaddr, head->hiaddr, head->idx, head->offset);
+            head->lowaddr, head->hiaddr, head->idx, head->offset);
      head=head->next;
    }
 }
@@ -177,20 +177,20 @@ void find_vma_from_offset(off_t offset)
    while (head) {
      off_t load_end = head->offset + HEAD_FILESZ(head);
      if (head->offset <= offset &&
-	 offset < load_end) {
-	 printf("0x%016llx-0x%016llx is load%x at offset %8llu\n",
-	   head->lowaddr, head->hiaddr, head->idx, head->offset);
-	   unsigned long vma_offset = (unsigned long)(offset-head->offset);
-	   printf("VMA is approximately 0x%llx\n", head->lowaddr+vma_offset);
-	   return;
-       }
-        head=head->next;
+       offset < load_end) {
+       printf("0x%016llx-0x%016llx is load%x at offset %8llu\n",
+         head->lowaddr, head->hiaddr, head->idx, head->offset);
+         unsigned long vma_offset = (unsigned long)(offset-head->offset);
+         printf("VMA is approximately 0x%llx\n", head->lowaddr+vma_offset);
+         return;
+     }
+     head=head->next;
    }
 }
 
 static void find_pattern_in_load_segment(Elf_ctxt *elf,
-		                         unsigned long pattern,
-							     unsigned long pat_len)
+                                         unsigned long pattern,
+                                         unsigned long pat_len)
 {
   load_list *head = g_list.head;
 
@@ -201,13 +201,13 @@ static void find_pattern_in_load_segment(Elf_ctxt *elf,
 rep:
     p = memmem(s, len, &pattern, pat_len);
     if (p) {
-	len -= (unsigned long)p - (unsigned long)s;
-	unsigned long offset = (unsigned long)p-(unsigned long)(elf->mmap_addr+head->offset);
-	s = (void*)((unsigned long)p + pat_len);
-	printf("VMA for the pattern is approx around 0x%llx\n", offset+head->lowaddr);
-	goto rep;
+      len -= (unsigned long)p - (unsigned long)s;
+      unsigned long offset = (unsigned long)p-(unsigned long)(elf->mmap_addr+head->offset);
+      s = (void*)((unsigned long)p + pat_len);
+      printf("VMA for the pattern is approx around 0x%llx\n", offset+head->lowaddr);
+      goto rep;
     } else {
-	head = head->next;
+      head = head->next;
     }
   }
 }
@@ -289,20 +289,20 @@ int main(int argc, char **argv)
   Elf_ctxt elf = {0};
   struct stat st;
   int retval = -1, opt = -1, longIndex;
-	char core[256] = {0};
-	off_t offset = 0;
-	unsigned long pattern = 0;
+  char core[256] = {0};
+  off_t offset = 0;
+  unsigned long pattern = 0;
   int do_dump=0;
 
   opt = getopt_long(argc, argv, optString, longOpts, &longIndex);
   while (-1 != opt) {
     switch(opt) {
-		 case 'o':
-			 offset = atol(optarg);
-			 break;
-		 case 'p':
-			 pattern = strtol(optarg, NULL, 16);
-			 break;
+     case 'o':
+       offset = atol(optarg);
+       break;
+     case 'p':
+       pattern = strtol(optarg, NULL, 16);
+       break;
      case 'h':
        print_usage();
        exit(0);
@@ -326,10 +326,10 @@ int main(int argc, char **argv)
          strncpy(core, optarg, sizeof(core));
          core[256] = 0;
        } else if (!strcmp("offset", longOpts[longIndex].name)) {
-				 offset = atol(optarg);
+         offset = atol(optarg);
        } else if (!strcmp("pattern", longOpts[longIndex].name)) {
-				 pattern = strtol(optarg, NULL, 16);
-			 } else if (!strcmp("version", longOpts[longIndex].name)) {
+         pattern = strtol(optarg, NULL, 16);
+       } else if (!strcmp("version", longOpts[longIndex].name)) {
          fprintf(stderr, "offtovma Version 1.0 [13th Jul 2016]\n");
          exit(0);
        } else if (!strcmp("help", longOpts[longIndex].name)) {
@@ -355,7 +355,7 @@ int main(int argc, char **argv)
     LOG_MSG("--offset is a mandatory argument\n");
     print_usage();
     exit(-1);
-	}
+  }
 
   int fd = SYSCALL_EXIT_ON_ERR(open(core, O_RDONLY));
   SYSCALL_EXIT_ON_ERR(fstat(fd, &st));
@@ -396,8 +396,8 @@ int main(int argc, char **argv)
   find_vma_from_offset(offset);
 
   if (pattern) {
-	printf("Looking for pattern %llx...\n", pattern);
-	find_pattern_in_load_segment(&elf, pattern, 4);
+  printf("Looking for pattern %llx...\n", pattern);
+  find_pattern_in_load_segment(&elf, pattern, 4);
   }
 }
 
